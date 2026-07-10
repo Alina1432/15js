@@ -1,60 +1,110 @@
-import './style.css'
-import javascriptLogo from './assets/javascript.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import { setupCounter } from './counter.js'
+import _ from 'lodash';
+import fetchCountries, { getMessage } from './fetchCountries.js';
 
-document.querySelector('#app').innerHTML = `
-<section id="center">
-  <div class="hero">
-    <img src="${heroImg}" class="base" width="170" height="179">
-    <img src="${javascriptLogo}" class="framework" alt="JavaScript logo"/>
-    <img src="${viteLogo}" class="vite" alt="Vite logo" />
-  </div>
-  <div>
-    <h1>Get started</h1>
-    <p>Edit <code>src/main.js</code> and save to test <code>HMR</code></p>
-  </div>
-  <button id="counter" type="button" class="counter"></button>
-</section>
+const searchInput = document.querySelector('#search-input');
+const countryContainer = document.querySelector('#country-container');
 
-<div class="ticks"></div>
+searchInput.addEventListener('input', _.debounce(onSearchInput, 500));
 
-<section id="next-steps">
-  <div id="docs">
-    <svg class="icon" role="presentation" aria-hidden="true"><use href="/icons.svg#documentation-icon"></use></svg>
-    <h2>Documentation</h2>
-    <p>Your questions, answered</p>
-    <ul>
-      <li>
-        <a href="https://vite.dev/" target="_blank">
-          <img class="logo" src="${viteLogo}" alt="" />
-          Explore Vite
-        </a>
-      </li>
-      <li>
-        <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript" target="_blank">
-          <img class="button-icon" src="${javascriptLogo}" alt="">
-          Learn more
-        </a>
-      </li>
-    </ul>
-  </div>
-  <div id="social">
-    <svg class="icon" role="presentation" aria-hidden="true"><use href="/icons.svg#social-icon"></use></svg>
-    <h2>Connect with us</h2>
-    <p>Join the Vite community</p>
-    <ul>
-      <li><a href="https://github.com/vitejs/vite" target="_blank"><svg class="button-icon" role="presentation" aria-hidden="true"><use href="/icons.svg#github-icon"></use></svg>GitHub</a></li>
-      <li><a href="https://chat.vite.dev/" target="_blank"><svg class="button-icon" role="presentation" aria-hidden="true"><use href="/icons.svg#discord-icon"></use></svg>Discord</a></li>
-      <li><a href="https://x.com/vite_js" target="_blank"><svg class="button-icon" role="presentation" aria-hidden="true"><use href="/icons.svg#x-icon"></use></svg>X.com</a></li>
-      <li><a href="https://bsky.app/profile/vite.dev" target="_blank"><svg class="button-icon" role="presentation" aria-hidden="true"><use href="/icons.svg#bluesky-icon"></use></svg>Bluesky</a></li>
-    </ul>
-  </div>
-</section>
+function onSearchInput(event) {
+  const searchQuery = event.target.value.trim();
 
-<div class="ticks"></div>
-<section id="spacer"></section>
-`
+  if (searchQuery === '') {
+    getMessage(false, true)
+    return;
+  }
 
-setupCounter(document.querySelector('#counter'))
+  fetchCountries(searchQuery)
+    .then(data => {
+      const countryInfoArray = data.data.objects;
+      console.log(countryInfoArray);
+
+      if (searchQuery === '') {
+        countryInfoArray = [];
+      }
+
+      if (countryInfoArray.length > 10) {
+        getMessage(true, false)
+        countryContainer.innerHTML = '';
+      } 
+      else if (countryInfoArray.length >= 2 && countryInfoArray.length <= 10) {
+        renderCountryList(countryInfoArray);
+      } 
+      else if (countryInfoArray.length === 1) {
+        renderCountryCard(countryInfoArray[0]);
+      }
+      else if (countryInfoArray.length === 0) {
+        getMessage(false, true)
+      }
+    })
+}
+
+function renderCountryList(countries) {
+  const markup = countries
+    .map(country => {
+      const name = country.names.common;
+      return `<li>${name}</li>`;
+    })
+    .join('');
+
+  countryContainer.innerHTML = `<ul style="list-style: square; padding-left: 20px;">${markup}</ul>`;
+}
+
+// function renderCountryCard(country) {
+//   const name = country.names.common;
+//   const capital = country.capitals[0].name;
+//   const population = country.population;
+//   const flagUrl = country.flag.url_png;
+
+//   const languagesMarkup = country.languages.map((language) => `<li>${language.name}</li>`).join('');
+//   const markup = `
+//     <div style="text-align: left; max-width: 650px; margin-top: 20px; font-family: sans-serif;">
+//       <h1 style="font-size: 56px; margin-bottom: 20px; font-weight: normal; color: #000;">${name}</h1>
+//       <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 40px;">
+//         <div>
+//           <p style="font-size: 22px; margin: 10px 0;"><strong>Capital:</strong> ${capital}</p>
+//           <p style="font-size: 22px; margin: 10px 0;"><strong>Population:</strong> ${population}</p>
+//           <p style="font-size: 22px; margin: 10px 0 5px 0;"><strong>Languages:</strong></p>
+//           <ul style="font-size: 22px; padding-left: 30px; margin-top: 0;">
+          
+//           </ul>
+//         </div>
+//         <div>
+//           <img src="${flagUrl}" alt="Flag of ${name}" width="280" style="border: 1px solid #ccc; box-shadow: 2px 2px 8px rgba(0,0,0,0.1);" />
+//         </div>
+//       </div>
+//     </div>
+//   `;
+
+//   countryContainer.innerHTML = markup;
+// }
+
+
+
+function renderCountryCard(country) {
+  const name = country.names.common;
+  const capital = country.capitals[0].name;
+  const population = country.population;
+  const flagUrl = country.flag.url_png;
+
+  const languagesMarkup = country.languages.map((language) => `<li>${language.name}</li>`).join('');
+  const markup = `
+    <div style="text-align: left; max-width: 650px; margin-top: 20px; font-family: sans-serif;">
+      <h1 style="font-size: 56px; margin-bottom: 20px; font-weight: normal; color: #000;">${name}</h1>
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 40px;">
+        <div>
+          <p style="font-size: 22px; margin: 10px 0;"><strong>Capital:</strong> ${capital}</p>
+          <p style="font-size: 22px; margin: 10px 0;"><strong>Population:</strong> ${population}</p>
+          <p style="font-size: 22px; margin: 10px 0 5px 0;"><strong>Languages:</strong></p>
+          <ul style="font-size: 22px; padding-left: 30px; margin-top: 0;">
+            ${languagesMarkup}  </ul>
+        </div>
+        <div>
+          <img src="${flagUrl}" alt="Flag of ${name}" width="280" style="border: 1px solid #ccc; box-shadow: 2px 2px 8px rgba(0,0,0,0.1);" />
+        </div>
+      </div>
+    </div>
+  `;
+
+  countryContainer.innerHTML = markup;
+}
